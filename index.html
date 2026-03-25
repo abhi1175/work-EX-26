@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dynamic Farming Dashboard 🌾</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>🌾 Dynamic Farming Dashboard (UP)</header>
+
+<div class="container">
+
+    <div class="card">
+        <h3>🌦 Select Farm Details</h3>
+        <label>Season:</label>
+        <select id="season">
+            <option value="">Select Season</option>
+            <option value="kharif">Kharif</option>
+            <option value="rabi">Rabi</option>
+            <option value="zaid">Zaid</option>
+        </select>
+
+        <label>Soil Type:</label>
+        <select id="soil">
+            <option value="">Select Soil</option>
+            <option value="loamy">Loamy</option>
+            <option value="clay">Clay</option>
+            <option value="sandy">Sandy</option>
+        </select>
+
+        <label>Water Availability:</label>
+        <select id="water">
+            <option value="">Select Water</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+        </select>
+
+        <label>Land Area (acre):</label>
+        <input type="number" id="area" placeholder="Enter area">
+
+        <button onclick="suggestCrops()">Get Crop Suggestions</button>
+    </div>
+
+</div>
+
+<div class="container" id="crop-container">
+    <!-- Suggested crops will appear here -->
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

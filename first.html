@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOMBER GAME ZONE</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #050505;
+            color: #00ff00; 
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            user-select: none;
+            /* CUSTOM TRISHUL CURSOR */
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" style="font-size:32px"><text y="32">🔱</text></svg>'), auto;
+        }
+
+        #hud {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            border-bottom: 2px solid #333;
+            z-index: 10;
+        }
+
+        .stat { font-size: 1.2rem; font-weight: bold; }
+        #health-bar { color: #ff4444; }
+        #level-tag { color: #ffeb3b; }
+
+        #pause-btn {
+            padding: 5px 15px;
+            background: #444;
+            color: white;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .enemy {
+            position: absolute;
+            width: 70px;
+            height: 50px;
+            background: #444;
+            border: 2px solid #ff4444;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 0 10px #ff4444;
+            transition: transform 0.05s;
+        }
+
+        .explode {
+            transform: scale(2);
+            background: radial-gradient(circle, #fff, #ffeb3b, #ff4444) !important;
+            border-radius: 50% !important;
+            opacity: 0;
+            transition: 0.3s ease-out;
+        }
+
+        #msg, #pause-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: #fff;
+            text-shadow: 0 0 20px #00ff00;
+            display: none;
+            z-index: 100;
+            text-align: center;
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #900;
+            color: white;
+            padding: 50px;
+            text-align: center;
+            border: 4px solid #fff;
+            z-index: 1000;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #fff;
+            color: #900;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        <div class="stat">SCORE: <span id="score">0</span></div>
+        <div class="stat" id="level-tag">LEVEL: <span id="level">1</span></div>
+        <div class="stat" id="health-bar">HP: <span id="health">100</span>%</div>
+        <button id="pause-btn" onclick="togglePause()">PAUSE (P)</button>
+    </div>
+
+    <div id="msg">LEVEL UP! 🔱</div>
+    <div id="pause-msg">GAME PAUSED<br><small style="font-size: 1.5rem;">Press 'P' to Resume</small></div>
+
+    <div id="game-container"></div>
+
+    <div id="game-over">
+        <h1>MISSILE BREACHED!</h1>
+        <p>YOUR DEFENSE COLLAPSED</p>
+        <h2 id="final-score"></h2>
+        <button onclick="location.reload()">RESTART SYSTEM</button>
+    </div>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const scoreDisp = document.getElementById('score');
+        const healthDisp = document.getElementById('health');
+        const levelDisp = document.getElementById('level');
+        const msg = document.getElementById('msg');
+        const pauseMsg = document.getElementById('pause-msg');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        let score = 0;
+        let health = 100;
+        let level = 1;
+        let gameActive = true;
+        let isPaused = false;
+        let enemySpeed = 2;
+        let spawnInterval = 1500;
+        let mainLoop;
+
+        const icons = ["🚀", "💣", "🚁", "🛰️", "🛸"];
+
+        function createEnemy() {
+            if (!gameActive || isPaused) return;
+
+            const enemy = document.createElement('div');
+            enemy.className = 'enemy';
+            enemy.innerHTML = icons[Math.floor(Math.random() * icons.length)];
+            
+            const x = Math.random() * (window.innerWidth - 80);
+            enemy.style.left = x + 'px';
+            enemy.style.top = '-60px';
+            container.appendChild(enemy);
+
+            let posY = -60;
+            const move = setInterval(() => {
+                if (!gameActive) {
+                    clearInterval(move);
+                    enemy.remove();
+                    return;
+                }
+
+                if (!isPaused) {
+                    posY += enemySpeed;
+                    enemy.style.top = posY + 'px';
+
+                    if (posY > window.innerHeight) {
+                        clearInterval(move);
+                        enemy.remove();
+                        hitPlayer();
+                    }
+                }
+            }, 20);
+
+            enemy.addEventListener('mousedown', () => {
+                if (isPaused || !gameActive) return;
+                score += 10;
+                scoreDisp.innerText = score;
+                
+                enemy.classList.add('explode');
+                clearInterval(move);
+                setTimeout(() => enemy.remove(), 200);
+
+                if (score % 100 === 0) {
+                    levelUp();
+                }
+            });
+        }
+
+        function hitPlayer() {
+            health -= 20;
+            healthDisp.innerText = health;
+            document.body.style.backgroundColor = "#400"; 
+            setTimeout(() => { if(!isPaused) document.body.style.backgroundColor = "#050505" }, 100);
+
+            if (health <= 0) {
+                gameActive = false;
+                document.getElementById('game-over').style.display = 'block';
+                document.getElementById('final-score').innerText = "SCORE: " + score;
+            }
+        }
+
+        function levelUp() {
+            level++;
+            levelDisp.innerText = level;
+            enemySpeed += 0.8; 
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 1000);
+        }
+
+        function togglePause() {
+            if (!gameActive) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseMsg.style.display = 'block';
+                pauseBtn.innerText = "RESUME (P)";
+            } else {
+                pauseMsg.style.display = 'none';
+                pauseBtn.innerText = "PAUSE (P)";
+            }
+        }
+
+        // Keyboard Shortcut for Pause
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'p') togglePause();
+        });
+
+        mainLoop = setInterval(createEnemy, spawnInterval);
+
+    </script>
+</body>
+</html>
